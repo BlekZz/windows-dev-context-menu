@@ -1,0 +1,65 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools]
+@="Dev Tools"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell]
+
+; ======================
+; Terminals
+; ======================
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\terminal]
+@="Windows Terminal"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\terminal\command]
+@="powershell.exe -ExecutionPolicy Bypass -File \"C:\\DevTools\\windows-dev-context-menu\\scripts\\dev-launcher.ps1\" terminal \"%V\""
+
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\pwsh]
+@="PowerShell 7"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\pwsh\command]
+@="powershell.exe -ExecutionPolicy Bypass -File \"C:\\DevTools\\windows-dev-context-menu\\scripts\\dev-launcher.ps1\" pwsh \"%V\""
+
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\gitbash]
+@="Git Bash"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\gitbash\command]
+@="powershell.exe -ExecutionPolicy Bypass -File \"C:\\DevTools\\windows-dev-context-menu\\scripts\\dev-launcher.ps1\" gitbash \"%V\""
+
+; ======================
+; Editors
+; ======================
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\vscode]
+@="Open with VSCode"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\vscode\command]
+@="powershell.exe -ExecutionPolicy Bypass -File \"C:\\DevTools\\windows-dev-context-menu\\scripts\\dev-launcher.ps1\" vscode \"%V\""
+
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\warp]
+@="Open with Warp"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\warp\command]
+@="powershell.exe -ExecutionPolicy Bypass -File \"C:\\DevTools\\windows-dev-context-menu\\scripts\\dev-launcher.ps1\" warp \"%V\""
+
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\antigravity]
+@="Open with Antigravity"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\antigravity\command]
+@="powershell.exe -ExecutionPolicy Bypass -File \"C:\\DevTools\\windows-dev-context-menu\\scripts\\dev-launcher.ps1\" antigravity \"%V\""
+
+
+; ======================
+; Tools
+; ======================
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\powerrename]
+@="Power Rename"
+
+[HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools\shell\powerrename\command]
+@="powershell.exe -ExecutionPolicy Bypass -File \"C:\\DevTools\\windows-dev-context-menu\\scripts\\dev-launcher.ps1\" powerrename \"%V\""
