@@ -1,0 +1,9 @@
+# Environment configuration
+.env
+
+# Windows-specific temporary files
+Thumbs.db
+Desktop.ini
+
+# PowerShell history or temp files
+*.log
