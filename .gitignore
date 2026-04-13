@@ -1,5 +1,6 @@
-# Environment configuration
+# Environment configuration (machine-specific, auto-generated)
 .env
+.hidden-entries.json
 
 # Windows-specific temporary files
 Thumbs.db

@@ -4,25 +4,32 @@ A customizable Windows right-click context menu that provides quick access to yo
 
 ![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-blue?logo=windows) ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue?logo=powershell)
 
+[繁體中文](README.zh-TW.md)
+
 ## ✨ Features
 
 - **One-click access** to dev tools from the Windows Explorer context menu
 - **Auto-detection** of installed applications via `setup-env.ps1`
+- **Skips uninstalled apps** — only installed tools appear in the menu
+- **Error notifications** — if a path becomes invalid, a popup explains the issue
+- **Hides duplicate entries** — optionally remove redundant per-app context menu items
+- **Safe uninstall** — original context menu entries are fully restored on removal
 - **Portable configuration** — paths stored in `.env`, not hardcoded
-- **Easy customization** — add or remove tools by editing a single script
-- **Compatible with Legacy context menus** (e.g. ExplorerPatcher, Winaero Tweaker)
+- **No admin required** for install/uninstall (admin only needed for hiding duplicates)
 
 ## 📦 Supported Tools
 
-| Category   | Tool                | Description                  |
-|------------|---------------------|------------------------------|
-| Terminals  | Windows Terminal    | Open folder in Windows Terminal |
-| Terminals  | PowerShell 7        | Open folder in PowerShell 7  |
-| Terminals  | Git Bash            | Open folder in Git Bash      |
-| Editors    | VS Code             | Open folder in VS Code       |
-| Editors    | Warp                | Open folder in Warp          |
-| Editors    | Antigravity         | Open folder in Antigravity   |
-| Tools      | PowerRename         | Launch PowerToys PowerRename |
+| Category  | Tool                | Notes                              |
+|-----------|---------------------|------------------------------------|
+| Terminals | Windows Terminal    | Open folder in Windows Terminal    |
+| Terminals | PowerShell 7        | Open folder in PowerShell 7        |
+| Terminals | Git Bash            | Open folder in Git Bash            |
+| Editors   | VS Code             | Open folder in VS Code             |
+| Editors   | Warp                | Open folder in Warp                |
+| Editors   | Antigravity         | Open folder in Antigravity         |
+| Tools     | PowerRename         | Launch PowerToys PowerRename       |
+
+Tools not installed on the current machine are automatically skipped — they won't appear in the menu.
 
 ## 🚀 Quick Start
 
@@ -39,7 +46,7 @@ cd windows-dev-context-menu
 powershell -ExecutionPolicy Bypass -File .\scripts\setup-env.ps1
 ```
 
-This scans your system for all supported tools and generates a `.env` file with their paths.
+Scans your system for all supported tools and generates a `.env` file with their paths. Searches common install locations as well as Scoop-managed packages.
 
 ### 3. Install the context menu
 
@@ -47,7 +54,19 @@ This scans your system for all supported tools and generates a `.env` file with 
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
-### 4. Done! 🎉
+If `.env` is missing, this step runs `setup-env.ps1` automatically.
+
+### 4. (Optional) Hide duplicate entries
+
+Some apps (Git Bash, PowerShell 7, Warp, etc.) add their own right-click entries when installed. If you want a cleaner menu, run this as **administrator**:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\hide-duplicates.ps1
+```
+
+This adds a `LegacyDisable` flag to each duplicate entry — the original keys are not deleted. A backup of which entries were hidden is saved to `.hidden-entries.json` so that `uninstall.ps1` can fully restore them.
+
+### 5. Done! 🎉
 
 Right-click on any folder background in Windows Explorer to see the **Dev Tools** submenu.
 
@@ -57,35 +76,51 @@ Right-click on any folder background in Windows Explorer to see the **Dev Tools*
 powershell -ExecutionPolicy Bypass -File .\scripts\uninstall.ps1
 ```
 
+If hidden entries exist (`.hidden-entries.json`), run as **administrator** to restore them:
+
+```powershell
+# Run PowerShell as administrator, then:
+powershell -ExecutionPolicy Bypass -File .\scripts\uninstall.ps1
+```
+
+The uninstaller will:
+1. Restore all previously hidden context menu entries
+2. Remove the Dev Tools submenu from the registry
+
 ## 📁 Project Structure
 
 ```
 windows-dev-context-menu/
 ├── .env                        # Auto-generated app paths (git-ignored)
+├── .hidden-entries.json        # Backup of hidden entries per machine (git-ignored)
 ├── .gitignore
 ├── README.md
+├── README.zh-TW.md
 └── scripts/
     ├── setup-env.ps1           # Detects installed apps → generates .env
-    ├── install.ps1             # Registers the context menu in Windows
-    ├── uninstall.ps1           # Removes the context menu from Windows
-    └── dev-launcher.ps1        # Core dispatcher (invoked by menu clicks)
+    ├── install.ps1             # Registers the context menu in Windows registry
+    ├── hide-duplicates.ps1     # Hides per-app context menu entries (requires admin)
+    ├── uninstall.ps1           # Removes context menu and restores hidden entries
+    └── dev-launcher.ps1        # Dispatcher invoked on every menu click
 ```
 
 ## ⚙️ How It Works
 
 ```
-Right-click folder → Dev Tools → Windows Terminal
-                                         │
-                                         ▼
-                               dev-launcher.ps1
-                                    loads .env
-                                    finds WT_PATH
-                                    launches wt.exe
+Right-click folder background → Dev Tools → Git Bash
+                                                │
+                                                ▼
+                                      dev-launcher.ps1
+                                           loads .env
+                                           finds GITBASH_PATH
+                                           launches git-bash.exe
 ```
 
-1. **`setup-env.ps1`** scans your system for supported applications (via `PATH` lookup and common install locations), then writes the discovered paths to a `.env` file.
-2. **`install.ps1`** reads the `.env` file and registers a cascading context menu under `HKEY_CURRENT_USER`, with icons pulled from the actual `.exe` files.
-3. When you click a menu item, Windows invokes **`dev-launcher.ps1`** with the action name and the current folder path. The launcher loads `.env`, resolves the application path, and launches it.
+1. **`setup-env.ps1`** scans your system for supported applications (known install paths + Scoop + PATH), then writes discovered paths to `.env`.
+2. **`install.ps1`** reads `.env`, skips any `NOT_FOUND` entries, and registers a cascading context menu under `HKEY_CURRENT_USER`. Icons are pulled from each app's own `.exe`.
+3. **`hide-duplicates.ps1`** (optional) adds `LegacyDisable` to known per-app context menu entries, suppressing them without deleting. Records what it changed in `.hidden-entries.json`.
+4. When you click a menu item, Windows runs **`dev-launcher.ps1`** (hidden window) with the action name and folder path. If a path is invalid, a popup message is shown.
+5. **`uninstall.ps1`** removes the Dev Tools menu and restores any previously hidden entries using the `.hidden-entries.json` backup.
 
 ## 🔧 Customization
 
@@ -93,12 +128,15 @@ Right-click folder → Dev Tools → Windows Terminal
 
 1. **Add detection** in `scripts/setup-env.ps1`:
    ```powershell
-   "MYAPP_PATH" = Find-App "myapp" @("C:\Path\To\myapp.exe")
+   "MYAPP_PATH" = Find-App "myapp" @(
+       "C:\Program Files\MyApp\myapp.exe",
+       (Join-Path $local "Programs\MyApp\myapp.exe")
+   )
    ```
 
 2. **Add menu entry** in `scripts/install.ps1`:
    ```powershell
-   Add-MenuItem -Key "08myapp" -Label "Open with MyApp" -Action "myapp" -IconEnvName "MYAPP_PATH"
+   Add-MenuItem -Key "08myapp" -Label "Open with MyApp" -Action "myapp" -PathEnvName "MYAPP_PATH"
    ```
 
 3. **Add launch logic** in `scripts/dev-launcher.ps1`:
@@ -108,13 +146,21 @@ Right-click folder → Dev Tools → Windows Terminal
    }
    ```
 
-4. Re-run setup and install:
+4. **Add duplicate hiding** in `scripts/hide-duplicates.ps1` (if the app adds its own context menu entry):
+   ```powershell
+   "MYAPP_PATH" = @(
+       "HKLM:\SOFTWARE\Classes\Directory\Background\shell\MyApp",
+       "HKCU:\Software\Classes\Directory\Background\shell\MyApp"
+   )
+   ```
+
+5. Re-run setup and install:
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\scripts\setup-env.ps1 -Force
    powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
    ```
 
-### Updating paths after installing/moving apps
+### Updating paths after installing or moving apps
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\setup-env.ps1 -Force
@@ -123,9 +169,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 
 ## 📝 Notes
 
-- The `.env` file is **git-ignored** since it contains machine-specific paths.
-- The context menu is registered under `HKEY_CURRENT_USER`, so **no admin privileges** are required.
-- Compatible with tools that restore the Windows 10 legacy context menu (e.g. ExplorerPatcher). Sub-menu items use `MUIVerb` for maximum compatibility.
+- `.env` and `.hidden-entries.json` are **git-ignored** — they contain machine-specific paths and state.
+- The context menu is registered under `HKEY_CURRENT_USER` — **no admin required** for install/uninstall.
+- Hiding duplicate entries modifies `HKEY_LOCAL_MACHINE` keys, which **requires admin**.
+- Compatible with tools that restore the Windows 10 legacy context menu (e.g. ExplorerPatcher, Winaero Tweaker).
 
 ## 📄 License
 
