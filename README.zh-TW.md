@@ -9,6 +9,8 @@
 ## ✨ 功能特色
 
 - **一鍵開啟**常用開發工具，直接從檔案總管右鍵存取
+- **Admin 提權選項**，Windows Terminal 與 PowerShell 7 各有對應的以系統管理員開啟選項
+- **零閃爍啟動**，選單點擊透過隱形 VBScript shim（`launcher.vbs`）派送，不會出現閃爍的 PowerShell 視窗
 - **自動偵測**已安裝的應用程式路徑，透過 `setup-env.ps1` 生成設定檔
 - **自動跳過未安裝的工具**，選單只顯示真正裝了的 app
 - **錯誤提示**，路徑失效時會彈出說明視窗
@@ -19,15 +21,17 @@
 
 ## 📦 支援的工具
 
-| 分類   | 工具                | 說明                          |
-|--------|---------------------|-------------------------------|
-| 終端機 | Windows Terminal    | 在當前資料夾開啟 Windows Terminal |
-| 終端機 | PowerShell 7        | 在當前資料夾開啟 PowerShell 7    |
-| 終端機 | Git Bash            | 在當前資料夾開啟 Git Bash         |
-| 編輯器 | VS Code             | 以 VS Code 開啟資料夾            |
-| 編輯器 | Warp                | 以 Warp 開啟資料夾               |
-| 編輯器 | Antigravity         | 以 Antigravity 開啟資料夾        |
-| 工具   | PowerRename         | 啟動 PowerToys PowerRename      |
+| 分類   | 工具                          | 說明                                        |
+|--------|-------------------------------|---------------------------------------------|
+| 終端機 | Windows Terminal              | 在當前資料夾開啟 Windows Terminal            |
+| 終端機 | Windows Terminal (Admin)      | 以系統管理員在當前資料夾開啟 Windows Terminal |
+| 終端機 | PowerShell 7                  | 在當前資料夾開啟 PowerShell 7               |
+| 終端機 | PowerShell 7 (Admin)          | 以系統管理員在當前資料夾開啟 PowerShell 7    |
+| 終端機 | Git Bash                      | 在當前資料夾開啟 Git Bash                   |
+| 編輯器 | VS Code                       | 以 VS Code 開啟資料夾                       |
+| 編輯器 | Warp                          | 以 Warp 開啟資料夾                          |
+| 編輯器 | Antigravity                   | 以 Antigravity 開啟資料夾                   |
+| 工具   | PowerRename                   | 啟動 PowerToys PowerRename                  |
 
 目前機器上未安裝的工具會自動跳過，不會出現在選單中。
 
@@ -101,7 +105,8 @@ windows-dev-context-menu/
     ├── install.ps1             # 將右鍵選單寫入 Windows Registry
     ├── hide-duplicates.ps1     # 隱藏各 app 原生的右鍵項目（需要 admin）
     ├── uninstall.ps1           # 移除選單並還原被隱藏的項目
-    └── dev-launcher.ps1        # 每次點選選單時被呼叫的啟動器
+    ├── launcher.vbs            # 隱形 shim，每次點選選單時被呼叫（零閃爍）
+    └── dev-launcher.ps1        # 由 launcher.vbs 轉呼叫的啟動器主體
 ```
 
 ## ⚙️ 運作原理
@@ -119,7 +124,7 @@ windows-dev-context-menu/
 1. **`setup-env.ps1`** 掃描系統，搜尋各工具的安裝路徑（已知路徑 + Scoop + PATH），將結果寫入 `.env`。
 2. **`install.ps1`** 讀取 `.env`，跳過 `NOT_FOUND` 的項目，在 `HKEY_CURRENT_USER` 下建立子選單。每個選單項目的圖示直接從各 app 的 `.exe` 取得。
 3. **`hide-duplicates.ps1`**（選用）對各 app 原生的右鍵項目加上 `LegacyDisable`，使其不顯示。修改紀錄存於 `.hidden-entries.json`。
-4. 點選選單時，Windows 執行 **`dev-launcher.ps1`**（視窗隱藏），傳入動作名稱與資料夾路徑。若路徑失效，會彈出錯誤提示。
+4. 點選選單時，Windows 執行 **`launcher.vbs`**（完全隱形，無閃爍），再轉呼叫 **`dev-launcher.ps1`**。若路徑失效，會彈出錯誤提示。Admin 選項透過 `Start-Process -Verb RunAs` 觸發 UAC 提權。
 5. **`uninstall.ps1`** 移除 Dev Tools 選單，並根據 `.hidden-entries.json` 備份還原被隱藏的項目。
 
 ## 🔧 自訂
@@ -136,7 +141,7 @@ windows-dev-context-menu/
 
 2. **新增選單項目** — `scripts/install.ps1`：
    ```powershell
-   Add-MenuItem -Key "08myapp" -Label "以 MyApp 開啟" -Action "myapp" -PathEnvName "MYAPP_PATH"
+   Add-MenuItem -Key "10myapp" -Label "以 MyApp 開啟" -Action "myapp" -PathEnvName "MYAPP_PATH"
    ```
 
 3. **新增啟動邏輯** — `scripts/dev-launcher.ps1`：

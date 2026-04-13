@@ -29,15 +29,15 @@ function Invoke-App {
     param(
         [string]$Path,
         [string]$ArgumentList,
-        [string]$Name
+        [string]$Name,
+        [switch]$Admin
     )
 
     if ($Path -and ($Path -ne "NOT_FOUND") -and (Test-Path $Path)) {
-        if ($ArgumentList) {
-            Start-Process -FilePath $Path -ArgumentList $ArgumentList
-        } else {
-            Start-Process -FilePath $Path
-        }
+        $params = @{ FilePath = $Path }
+        if ($ArgumentList) { $params.ArgumentList = $ArgumentList }
+        if ($Admin)        { $params.Verb = "RunAs" }
+        Start-Process @params
     } else {
         Show-Error "$Name is not installed or its path is invalid.`n`nRe-run setup-env.ps1 to update paths."
     }
@@ -49,10 +49,19 @@ switch ($action) {
         Invoke-App $env:WT_PATH "-d `"$path`"" "Windows Terminal"
     }
 
+    "terminaladmin" {
+        Invoke-App $env:WT_PATH "-d `"$path`"" "Windows Terminal" -Admin
+    }
+
     "pwsh" {
         # Escape single quotes in path to avoid breaking the -Command string
         $escapedPath = $path -replace "'", "''"
         Invoke-App $env:PWSH_PATH "-NoExit -Command `"Set-Location '$escapedPath'`"" "PowerShell 7"
+    }
+
+    "pwshadmin" {
+        $escapedPath = $path -replace "'", "''"
+        Invoke-App $env:PWSH_PATH "-NoExit -Command `"Set-Location '$escapedPath'`"" "PowerShell 7" -Admin
     }
 
     "gitbash" {

@@ -1,6 +1,5 @@
-$basePath  = "HKCU:\Software\Classes\Directory\Background\shell\DevTools"
-$scriptPath = Join-Path $PSScriptRoot "dev-launcher.ps1"
-$envFile    = Join-Path $PSScriptRoot "..\.env"
+$basePath = "HKCU:\Software\Classes\Directory\Background\shell\DevTools"
+$envFile  = Join-Path $PSScriptRoot "..\.env"
 
 # Auto-run setup if .env is missing
 if (-not (Test-Path $envFile)) {
@@ -63,24 +62,27 @@ function Add-MenuItem {
     }
 
     New-Item $cmdPath -Force | Out-Null
-    $command = "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`" -action $Action -path `"%V`""
+    $vbsPath = Join-Path $PSScriptRoot "launcher.vbs"
+    $command = "wscript.exe `"$vbsPath`" $Action `"%V`""
     Set-ItemProperty $cmdPath -Name "(Default)" -Value $command -Force
 
     Write-Host "  [+] $Label" -ForegroundColor Green
 }
 
 # Terminals
-Add-MenuItem -Key "01terminal"    -Label "Windows Terminal"       -Action "terminal"     -PathEnvName "WT_PATH"
-Add-MenuItem -Key "02pwsh"        -Label "PowerShell 7"           -Action "pwsh"         -PathEnvName "PWSH_PATH"
-Add-MenuItem -Key "03gitbash"     -Label "Git Bash"               -Action "gitbash"      -PathEnvName "GITBASH_PATH"
+Add-MenuItem -Key "01terminal"    -Label "Windows Terminal"              -Action "terminal"      -PathEnvName "WT_PATH"
+Add-MenuItem -Key "02terminaladmin" -Label "Windows Terminal (Admin)"    -Action "terminaladmin" -PathEnvName "WT_PATH"
+Add-MenuItem -Key "03pwsh"        -Label "PowerShell 7"                  -Action "pwsh"          -PathEnvName "PWSH_PATH"
+Add-MenuItem -Key "04pwshadmin"   -Label "PowerShell 7 (Admin)"          -Action "pwshadmin"     -PathEnvName "PWSH_PATH"
+Add-MenuItem -Key "05gitbash"     -Label "Git Bash"                      -Action "gitbash"       -PathEnvName "GITBASH_PATH"
 
 # Editors
-Add-MenuItem -Key "04vscode"      -Label "Open with VSCode"       -Action "vscode"       -PathEnvName "VSCODE_PATH"
-Add-MenuItem -Key "05warp"        -Label "Open with Warp"         -Action "warp"         -PathEnvName "WARP_PATH"
-Add-MenuItem -Key "06antigravity" -Label "Open with Antigravity"  -Action "antigravity"  -PathEnvName "ANTIGRAVITY_PATH"
+Add-MenuItem -Key "06vscode"      -Label "Open with VSCode"              -Action "vscode"        -PathEnvName "VSCODE_PATH"
+Add-MenuItem -Key "07warp"        -Label "Open with Warp"                -Action "warp"          -PathEnvName "WARP_PATH"
+Add-MenuItem -Key "08antigravity" -Label "Open with Antigravity"         -Action "antigravity"   -PathEnvName "ANTIGRAVITY_PATH"
 
 # Tools
-Add-MenuItem -Key "07powerrename" -Label "Power Rename"           -Action "powerrename"  -PathEnvName "POWERRENAME_PATH"
+Add-MenuItem -Key "09powerrename" -Label "Power Rename"                  -Action "powerrename"   -PathEnvName "POWERRENAME_PATH"
 
 Write-Host "`nDev Tools context menu installed successfully!" -ForegroundColor Cyan
 Write-Host "Right-click on any folder background to see it." -ForegroundColor Gray

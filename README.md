@@ -9,6 +9,8 @@ A customizable Windows right-click context menu that provides quick access to yo
 ## ✨ Features
 
 - **One-click access** to dev tools from the Windows Explorer context menu
+- **Admin variants** for Windows Terminal and PowerShell 7 — launch elevated with a single click
+- **No window flash** — menu clicks are dispatched via a hidden VBScript shim (`launcher.vbs`)
 - **Auto-detection** of installed applications via `setup-env.ps1`
 - **Skips uninstalled apps** — only installed tools appear in the menu
 - **Error notifications** — if a path becomes invalid, a popup explains the issue
@@ -19,15 +21,17 @@ A customizable Windows right-click context menu that provides quick access to yo
 
 ## 📦 Supported Tools
 
-| Category  | Tool                | Notes                              |
-|-----------|---------------------|------------------------------------|
-| Terminals | Windows Terminal    | Open folder in Windows Terminal    |
-| Terminals | PowerShell 7        | Open folder in PowerShell 7        |
-| Terminals | Git Bash            | Open folder in Git Bash            |
-| Editors   | VS Code             | Open folder in VS Code             |
-| Editors   | Warp                | Open folder in Warp                |
-| Editors   | Antigravity         | Open folder in Antigravity         |
-| Tools     | PowerRename         | Launch PowerToys PowerRename       |
+| Category  | Tool                       | Notes                                      |
+|-----------|----------------------------|--------------------------------------------|
+| Terminals | Windows Terminal           | Open folder in Windows Terminal            |
+| Terminals | Windows Terminal (Admin)   | Open folder in Windows Terminal as admin   |
+| Terminals | PowerShell 7               | Open folder in PowerShell 7                |
+| Terminals | PowerShell 7 (Admin)       | Open folder in PowerShell 7 as admin       |
+| Terminals | Git Bash                   | Open folder in Git Bash                    |
+| Editors   | VS Code                    | Open folder in VS Code                     |
+| Editors   | Warp                       | Open folder in Warp                        |
+| Editors   | Antigravity                | Open folder in Antigravity                 |
+| Tools     | PowerRename                | Launch PowerToys PowerRename               |
 
 Tools not installed on the current machine are automatically skipped — they won't appear in the menu.
 
@@ -101,7 +105,8 @@ windows-dev-context-menu/
     ├── install.ps1             # Registers the context menu in Windows registry
     ├── hide-duplicates.ps1     # Hides per-app context menu entries (requires admin)
     ├── uninstall.ps1           # Removes context menu and restores hidden entries
-    └── dev-launcher.ps1        # Dispatcher invoked on every menu click
+    ├── launcher.vbs            # Hidden shim invoked on every menu click (no window flash)
+    └── dev-launcher.ps1        # Dispatcher that launcher.vbs hands off to
 ```
 
 ## ⚙️ How It Works
@@ -119,7 +124,7 @@ Right-click folder background → Dev Tools → Git Bash
 1. **`setup-env.ps1`** scans your system for supported applications (known install paths + Scoop + PATH), then writes discovered paths to `.env`.
 2. **`install.ps1`** reads `.env`, skips any `NOT_FOUND` entries, and registers a cascading context menu under `HKEY_CURRENT_USER`. Icons are pulled from each app's own `.exe`.
 3. **`hide-duplicates.ps1`** (optional) adds `LegacyDisable` to known per-app context menu entries, suppressing them without deleting. Records what it changed in `.hidden-entries.json`.
-4. When you click a menu item, Windows runs **`dev-launcher.ps1`** (hidden window) with the action name and folder path. If a path is invalid, a popup message is shown.
+4. When you click a menu item, Windows runs **`launcher.vbs`** via `wscript.exe` (fully invisible — no window flash), which in turn runs **`dev-launcher.ps1`** hidden. If a path is invalid, a popup message is shown. Admin variants use `Start-Process -Verb RunAs` to trigger a UAC prompt.
 5. **`uninstall.ps1`** removes the Dev Tools menu and restores any previously hidden entries using the `.hidden-entries.json` backup.
 
 ## 🔧 Customization
@@ -136,7 +141,7 @@ Right-click folder background → Dev Tools → Git Bash
 
 2. **Add menu entry** in `scripts/install.ps1`:
    ```powershell
-   Add-MenuItem -Key "08myapp" -Label "Open with MyApp" -Action "myapp" -PathEnvName "MYAPP_PATH"
+   Add-MenuItem -Key "10myapp" -Label "Open with MyApp" -Action "myapp" -PathEnvName "MYAPP_PATH"
    ```
 
 3. **Add launch logic** in `scripts/dev-launcher.ps1`:
