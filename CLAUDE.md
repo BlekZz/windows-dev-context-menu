@@ -58,5 +58,5 @@ Then re-run `setup-env.ps1` and `install.ps1` to apply.
 - `setup-env.ps1` checks known install paths first, then falls back to `PATH` (skips `.cmd`/`.bat` wrappers — only accepts `.exe`/`.com`). Also searches Scoop (`~\scoop\apps\`).
 - `install.ps1` skips any app whose `.env` value is `NOT_FOUND`.
 - `dev-launcher.ps1` runs hidden (`-WindowStyle Hidden`) and shows a WScript popup on error.
-- `hide-duplicates.ps1` adds `LegacyDisable` to suppress entries without deleting them; records only the keys it personally modified in `.hidden-entries.json`.
+- `hide-duplicates.ps1` suppresses duplicate entries in two ways: `LegacyDisable` for simple shell verb keys, and key deletion for COM shellex handlers (e.g. PowerToys Power Rename). Backup is saved to `.hidden-entries.json` and merges with any prior backup on each run.
 - `uninstall.ps1` also cleans up legacy `CommandStore` entries from older installs.

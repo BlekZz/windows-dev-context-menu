@@ -45,12 +45,14 @@ function Invoke-App {
 
 switch ($action) {
 
-    "terminal" {
-        Invoke-App $env:WT_PATH "-d `"$path`"" "Windows Terminal"
+    "cmd" {
+        $escapedPath = $path.TrimEnd('\')
+        Start-Process "$env:SystemRoot\System32\cmd.exe" -ArgumentList "/K", "cd /d `"$escapedPath`""
     }
 
-    "terminaladmin" {
-        Invoke-App $env:WT_PATH "-d `"$path`"" "Windows Terminal" -Admin
+    "cmdadmin" {
+        $escapedPath = $path.TrimEnd('\')
+        Start-Process "$env:SystemRoot\System32\cmd.exe" -ArgumentList "/K", "cd /d `"$escapedPath`"" -Verb RunAs
     }
 
     "pwsh" {
@@ -82,6 +84,10 @@ switch ($action) {
 
     "powerrename" {
         Invoke-App $env:POWERRENAME_PATH "`"$path`"" "PowerRename"
+    }
+
+    "vs" {
+        Invoke-App $env:VS_PATH "`"$path`"" "Visual Studio"
     }
 
     default {

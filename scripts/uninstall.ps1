@@ -14,13 +14,35 @@ if (Test-Path $backupFile) {
     } else {
         Write-Host "Restoring hidden context menu entries..." -ForegroundColor Cyan
 
-        $entries = Get-Content $backupFile -Raw | ConvertFrom-Json
-        foreach ($key in $entries) {
+        $raw = Get-Content $backupFile -Raw | ConvertFrom-Json
+
+        # Support both old format (plain array) and new format ({ legacyDisable, shellex })
+        if ($raw -is [array]) {
+            $legacyDisable = $raw
+            $shellex = @()
+        } else {
+            $legacyDisable = if ($raw.legacyDisable) { $raw.legacyDisable } else { @() }
+            $shellex       = if ($raw.shellex)       { $raw.shellex }       else { @() }
+        }
+
+        foreach ($key in $legacyDisable) {
             if (Test-Path $key) {
                 Remove-ItemProperty $key -Name "LegacyDisable" -ErrorAction SilentlyContinue
                 Write-Host "  [+] Restored: $($key.Split('\')[-1])" -ForegroundColor Green
             } else {
                 Write-Host "  [~] Key no longer exists (skipped): $($key.Split('\')[-1])" -ForegroundColor DarkGray
+            }
+        }
+
+        foreach ($item in $shellex) {
+            $path  = $item.path
+            $value = $item.value
+            if (-not (Test-Path $path)) {
+                New-Item $path -Force | Out-Null
+                Set-ItemProperty $path -Name "(Default)" -Value $value -Force
+                Write-Host "  [+] Restored shellex: $(Split-Path $path -Leaf)" -ForegroundColor Green
+            } else {
+                Write-Host "  [~] Shellex key already exists (skipped): $(Split-Path $path -Leaf)" -ForegroundColor DarkGray
             }
         }
 

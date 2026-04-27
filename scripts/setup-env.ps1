@@ -27,6 +27,36 @@ function Find-App {
     return "NOT_FOUND"
 }
 
+# Enumerates all pwsh.exe under versioned subdirectories and returns the one with
+# the highest file version — avoids hardcoding \7\ which breaks on 7.2, 7.4, etc.
+function Find-LatestPwsh {
+    param(
+        [string[]]$BaseDirs,
+        [string]$ScoopExe
+    )
+    $candidates = @()
+    foreach ($base in $BaseDirs) {
+        if (-not (Test-Path $base)) { continue }
+        Get-ChildItem $base -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            $exe = Join-Path $_.FullName "pwsh.exe"
+            if (Test-Path $exe) { $candidates += $exe }
+        }
+    }
+    if ($ScoopExe -and (Test-Path $ScoopExe)) { $candidates += $ScoopExe }
+
+    if ($candidates.Count -eq 0) {
+        $cmd = Get-Command "pwsh" -ErrorAction SilentlyContinue
+        if ($cmd -and $cmd.Source -match '\.exe$') { return $cmd.Source }
+        return "NOT_FOUND"
+    }
+
+    $best = $candidates | Sort-Object {
+        try { [version](Get-Item $_).VersionInfo.ProductVersion.Split('-')[0] }
+        catch { [version]"0.0" }
+    } | Select-Object -Last 1
+    return $best
+}
+
 Write-Host "Detecting application paths..." -ForegroundColor Cyan
 
 $local  = $env:LOCALAPPDATA
@@ -38,12 +68,9 @@ $apps = @{
     "WT_PATH" = Find-App "wt" @(
         (Join-Path $local "Microsoft\WindowsApps\wt.exe")
     )
-    "PWSH_PATH" = Find-App "pwsh" @(
-        "$prog\PowerShell\7\pwsh.exe",
-        "$prog\PowerShell\pwsh.exe",
-        "$prog86\PowerShell\7\pwsh.exe",
-        "$scoop\pwsh\current\pwsh.exe"
-    )
+    "PWSH_PATH" = Find-LatestPwsh `
+        -BaseDirs @("$prog\PowerShell", "$prog86\PowerShell") `
+        -ScoopExe "$scoop\pwsh\current\pwsh.exe"
     "GITBASH_PATH" = Find-App "git-bash" @(
         "$prog\Git\git-bash.exe",
         "$prog86\Git\git-bash.exe",
@@ -68,10 +95,27 @@ $apps = @{
         "$prog\Antigravity\antigravity.exe"
     )
     "POWERRENAME_PATH" = Find-App "PowerToys.PowerRename" @(
+        "$prog\PowerToys\WinUI3Apps\PowerToys.PowerRename.exe",
         "$prog\PowerToys\PowerToys.PowerRename.exe",
         "$prog\PowerToys\PowerRename\PowerToys.PowerRename.exe",
         (Join-Path $local "PowerToys\WinUI3Apps\PowerToys.PowerRename.exe"),
         (Join-Path $local "PowerToys\PowerToys.PowerRename.exe")
+    )
+    "VS_PATH" = Find-App "devenv" @(
+        "$prog\Microsoft Visual Studio\2022\Community\Common7\IDE\devenv.exe",
+        "$prog\Microsoft Visual Studio\2022\Professional\Common7\IDE\devenv.exe",
+        "$prog\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\devenv.exe",
+        "$prog\Microsoft Visual Studio\2022\Preview\Common7\IDE\devenv.exe",
+        "$prog\Microsoft Visual Studio\2019\Community\Common7\IDE\devenv.exe",
+        "$prog\Microsoft Visual Studio\2019\Professional\Common7\IDE\devenv.exe",
+        "$prog\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\devenv.exe",
+        "$prog86\Microsoft Visual Studio\2022\Community\Common7\IDE\devenv.exe",
+        "$prog86\Microsoft Visual Studio\2022\Professional\Common7\IDE\devenv.exe",
+        "$prog86\Microsoft Visual Studio\2019\Community\Common7\IDE\devenv.exe",
+        "$prog86\Microsoft Visual Studio\2019\Professional\Common7\IDE\devenv.exe",
+        # VSLauncher.exe: shipped with VS Installer, opens VS even without a full devenv install
+        "$prog86\Common Files\Microsoft Shared\MSEnv\VSLauncher.exe",
+        "$prog\Common Files\Microsoft Shared\MSEnv\VSLauncher.exe"
     )
 }
 
