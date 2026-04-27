@@ -55,8 +55,32 @@ Then re-run `setup-env.ps1` and `install.ps1` to apply.
 
 ## Key Behaviors
 
-- `setup-env.ps1` checks known install paths first, then falls back to `PATH` (skips `.cmd`/`.bat` wrappers — only accepts `.exe`/`.com`). Also searches Scoop (`~\scoop\apps\`).
-- `install.ps1` skips any app whose `.env` value is `NOT_FOUND`.
-- `dev-launcher.ps1` runs hidden (`-WindowStyle Hidden`) and shows a WScript popup on error.
-- `hide-duplicates.ps1` suppresses duplicate entries in two ways: `LegacyDisable` for simple shell verb keys, and key deletion for COM shellex handlers (e.g. PowerToys Power Rename). Backup is saved to `.hidden-entries.json` and merges with any prior backup on each run.
-- `uninstall.ps1` also cleans up legacy `CommandStore` entries from older installs.
+- `setup-env.ps1` checks known install paths first, then falls back to `PATH` (skips `.cmd`/`.bat` wrappers — only accepts `.exe`/`.com`). Also searches Scoop (`~\scoop\apps\`). PowerShell 7 detection enumerates all subdirectories under `Program Files\PowerShell\` and picks the one with the highest `VersionInfo.ProductVersion`, so it works regardless of whether PS is in `\7\`, `\7.4\`, etc.
+- `install.ps1` skips any app whose `.env` value is `NOT_FOUND`. MSIX-packaged apps (PowerToys, Windows Terminal) cannot provide Shell icons via their exe — always pass an explicit `-Icon "shell32.dll,NNN"` for these.
+- `dev-launcher.ps1` runs hidden and shows a WScript popup on error.
+- `hide-duplicates.ps1` suppresses duplicate entries in two ways: `LegacyDisable` for simple shell verb keys, and key deletion for COM `shellex\ContextMenuHandlers` entries (e.g. PowerToys Power Rename, GUID `{0440049F-D1DC-4E46-B27B-98393D79486B}`). Backup merges with any prior `.hidden-entries.json` on each run.
+- `uninstall.ps1` supports both old backup format (plain array) and new format (`{ legacyDisable, shellex }`).
+
+## Windows 11 Registry Constraints
+
+Hard-won knowledge — do not re-discover these:
+
+**`Position=Top` breaks menu order in Windows 11.**
+Setting `Position=Top` on a `HKCU\...\shell` key causes it to appear *before* View/Sort by/Refresh in the Windows 11 context menu (not after). Omit `Position` entirely; after hiding other entries Dev Tools becomes the first user-registered item and naturally follows the system items.
+
+**`shell\cmd` and `shell\Powershell` are TrustedInstaller-owned.**
+These HKLM keys cannot be written to by administrators (`Access Denied`). They only appear in the "Show more options" classic menu, not the main Windows 11 context menu — do not attempt to hide them.
+
+**MSIX exe files cannot be used as Shell icon sources.**
+Apps installed via MSIX sparse package (PowerToys `v0.70+`, Windows Terminal) store icons in the package manifest, not as Win32 icon resources. `New-ItemProperty ... "Icon" -Value $exePath` silently produces a broken icon. Always use a `shell32.dll,NNN` or `imageres.dll,NNN` reference instead.
+
+**COM shellex handlers require key deletion, not `LegacyDisable`.**
+`LegacyDisable` only works on `shell\<verb>` keys. PowerToys Power Rename registers via `HKCU\...\shellex\ContextMenuHandlers\PowerRenameExt`. To suppress it, delete the subkey and save the GUID (`{0440049F-D1DC-4E46-B27B-98393D79486B}`) for restoration.
+
+**Windows 11 native "Open in Terminal" is not a registry shell key.**
+It is controlled by the Windows Terminal default terminal setting (Settings → System → For developers → Terminal). It cannot be removed via `LegacyDisable` or any registry edit from this project.
+
+## Known App Paths (this machine)
+
+- `POWERRENAME_PATH` → `C:\Program Files\PowerToys\WinUI3Apps\PowerToys.PowerRename.exe` (the `WinUI3Apps\` subdir is required; bare `PowerToys\` path returns NOT_FOUND)
+- `VS_PATH` → VSLauncher fallback: `C:\Program Files (x86)\Common Files\Microsoft Shared\MSEnv\VSLauncher.exe` (full devenv.exe not installed)
