@@ -1,5 +1,6 @@
 $basePath = "HKCU:\Software\Classes\Directory\Background\shell\DevTools"
 $envFile  = Join-Path $PSScriptRoot "..\.env"
+$ErrorActionPreference = "Stop"
 
 # Auto-run setup if .env is missing
 if (-not (Test-Path $envFile)) {
@@ -89,10 +90,11 @@ Add-MenuItem -Key "05gitbash"     -Label "Git Bash"                -Action "gitb
 Add-MenuItem -Key "06vscode"      -Label "Open with VSCode"        -Action "vscode"      -PathEnvName "VSCODE_PATH"
 Add-MenuItem -Key "07warp"        -Label "Open with Warp"          -Action "warp"        -PathEnvName "WARP_PATH"
 Add-MenuItem -Key "08antigravity" -Label "Open with Antigravity"   -Action "antigravity" -PathEnvName "ANTIGRAVITY_PATH"
+Add-MenuItem -Key "09codex"       -Label "Open with Codex"         -Action "codex"       -PathEnvName "CODEX_PATH"       -Icon "shell32.dll,269"
 
 # Tools — MSIX-packaged apps use explicit DLL icons; their exe icons can't be extracted by Shell
-Add-MenuItem -Key "09powerrename" -Label "Power Rename"            -Action "powerrename" -PathEnvName "POWERRENAME_PATH" -Icon "shell32.dll,269"
-Add-MenuItem -Key "10vs"          -Label "Open with Visual Studio" -Action "vs"          -PathEnvName "VS_PATH"          -Icon "shell32.dll,269"
+Add-MenuItem -Key "10powerrename" -Label "Power Rename"            -Action "powerrename" -PathEnvName "POWERRENAME_PATH" -Icon "shell32.dll,269"
+Add-MenuItem -Key "11vs"          -Label "Open with Visual Studio" -Action "vs"          -PathEnvName "VS_PATH"          -Icon "shell32.dll,269"
 
 Write-Host "`nDev Tools context menu installed successfully!" -ForegroundColor Cyan
 Write-Host "Right-click on any folder background to see it." -ForegroundColor Gray

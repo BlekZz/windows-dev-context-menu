@@ -9,6 +9,14 @@ if ((Test-Path $envFile) -and (-not $Force)) {
     return
 }
 
+function Test-AppPath {
+    param([string]$Path)
+
+    if (-not $Path) { return $false }
+    try { return (Test-Path $Path -ErrorAction Stop) }
+    catch { return $false }
+}
+
 function Find-App {
     param(
         [string]$Name,
@@ -17,7 +25,7 @@ function Find-App {
 
     # 1. Check known install paths first — more reliable than PATH for .exe resolution
     foreach ($p in $Paths) {
-        if ($p -and (Test-Path $p)) { return $p }
+        if (Test-AppPath $p) { return $p }
     }
 
     # 2. Fallback: search PATH, but only accept real executables (skip .cmd/.bat wrappers)
@@ -36,19 +44,52 @@ function Find-LatestPwsh {
     )
     $candidates = @()
     foreach ($base in $BaseDirs) {
-        if (-not (Test-Path $base)) { continue }
+        if (-not (Test-AppPath $base)) { continue }
         Get-ChildItem $base -Directory -ErrorAction SilentlyContinue | ForEach-Object {
             $exe = Join-Path $_.FullName "pwsh.exe"
-            if (Test-Path $exe) { $candidates += $exe }
+            if (Test-AppPath $exe) { $candidates += $exe }
         }
     }
-    if ($ScoopExe -and (Test-Path $ScoopExe)) { $candidates += $ScoopExe }
+    if (Test-AppPath $ScoopExe) { $candidates += $ScoopExe }
 
     if ($candidates.Count -eq 0) {
         $cmd = Get-Command "pwsh" -ErrorAction SilentlyContinue
         if ($cmd -and $cmd.Source -match '\.exe$') { return $cmd.Source }
         return "NOT_FOUND"
     }
+
+    $best = $candidates | Sort-Object {
+        try { [version](Get-Item $_).VersionInfo.ProductVersion.Split('-')[0] }
+        catch { [version]"0.0" }
+    } | Select-Object -Last 1
+    return $best
+}
+
+function Find-CodexDesktop {
+    $candidates = @()
+
+    # MSIX package install location is the most stable way to find the desktop app.
+    Get-AppxPackage "OpenAI.Codex" -ErrorAction SilentlyContinue | ForEach-Object {
+        $exe = Join-Path $_.InstallLocation "app\Codex.exe"
+        if (Test-AppPath $exe) { $candidates += $exe }
+    }
+
+    # The CLI helper is often on PATH; use it to infer the desktop executable.
+    $cmd = Get-Command "codex" -ErrorAction SilentlyContinue
+    if ($cmd -and $cmd.Source -match '\\app\\resources\\codex\.exe$') {
+        $appDir = Split-Path (Split-Path $cmd.Source -Parent) -Parent
+        $exe = Join-Path $appDir "Codex.exe"
+        if (Test-AppPath $exe) { $candidates += $exe }
+    }
+
+    # Fallback for environments where Get-AppxPackage is unavailable or filtered.
+    $windowsApps = Join-Path $env:ProgramFiles "WindowsApps"
+    Get-ChildItem $windowsApps -Directory -Filter "OpenAI.Codex_*" -ErrorAction SilentlyContinue | ForEach-Object {
+        $exe = Join-Path $_.FullName "app\Codex.exe"
+        if (Test-AppPath $exe) { $candidates += $exe }
+    }
+
+    if ($candidates.Count -eq 0) { return "NOT_FOUND" }
 
     $best = $candidates | Sort-Object {
         try { [version](Get-Item $_).VersionInfo.ProductVersion.Split('-')[0] }
@@ -94,6 +135,7 @@ $apps = @{
         (Join-Path $local "Programs\Antigravity\Antigravity.exe"),
         "$prog\Antigravity\antigravity.exe"
     )
+    "CODEX_PATH" = Find-CodexDesktop
     "POWERRENAME_PATH" = Find-App "PowerToys.PowerRename" @(
         "$prog\PowerToys\WinUI3Apps\PowerToys.PowerRename.exe",
         "$prog\PowerToys\PowerToys.PowerRename.exe",

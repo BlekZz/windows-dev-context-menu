@@ -82,6 +82,10 @@ switch ($action) {
         Invoke-App $env:ANTIGRAVITY_PATH "`"$path`"" "Antigravity"
     }
 
+    "codex" {
+        Invoke-App $env:CODEX_PATH "`"$path`"" "Codex"
+    }
+
     "powerrename" {
         Invoke-App $env:POWERRENAME_PATH "`"$path`"" "PowerRename"
     }

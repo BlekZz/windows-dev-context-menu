@@ -59,7 +59,7 @@ Remove-Item "Registry::HKEY_CLASSES_ROOT\Directory\Background\shell\DevTools" -R
 
 # Clean up any CommandStore entries from older versions
 $csBase = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell"
-@("DT.Terminal","DT.Pwsh","DT.GitBash","DT.VSCode","DT.Warp","DT.Antigravity","DT.PowerRename") | ForEach-Object {
+@("DT.Terminal","DT.Pwsh","DT.GitBash","DT.VSCode","DT.Warp","DT.Antigravity","DT.Codex","DT.PowerRename") | ForEach-Object {
     Remove-Item "$csBase\$_" -Recurse -Force -ErrorAction SilentlyContinue
 }
 Remove-Item "HKCU:\Software\Classes\Directory\Background\shell\TestItem" -Recurse -Force -ErrorAction SilentlyContinue

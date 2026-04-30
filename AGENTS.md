@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## What This Project Does
 
@@ -56,10 +56,7 @@ Then re-run `setup-env.ps1` and `install.ps1` to apply.
 ## Key Behaviors
 
 - `setup-env.ps1` checks known install paths first, then falls back to `PATH` (skips `.cmd`/`.bat` wrappers — only accepts `.exe`/`.com`). Also searches Scoop (`~\scoop\apps\`). PowerShell 7 detection enumerates all subdirectories under `Program Files\PowerShell\` and picks the one with the highest `VersionInfo.ProductVersion`, so it works regardless of whether PS is in `\7\`, `\7.4\`, etc.
-- App path existence checks must tolerate `Access Denied`, especially under `C:\Program Files\WindowsApps`. Use `Test-AppPath` instead of raw `Test-Path` when probing candidate executables so MSIX locations do not emit noisy errors or break detection.
-- Codex is an MSIX desktop app with multiple bundled executables. Prefer `app\Codex.exe` for "Open with Codex"; do not use `app\resources\codex.exe`, which is the bundled CLI/sandbox helper. If `Get-AppxPackage OpenAI.Codex` is filtered or unavailable, infer `app\Codex.exe` from a PATH result that points at `app\resources\codex.exe`.
 - `install.ps1` skips any app whose `.env` value is `NOT_FOUND`. MSIX-packaged apps (PowerToys, Windows Terminal) cannot provide Shell icons via their exe — always pass an explicit `-Icon "shell32.dll,NNN"` for these.
-- `install.ps1` sets `$ErrorActionPreference = "Stop"` so registry write failures do not continue and print a false success message. Keep registry-mutating scripts honest about failure.
 - `dev-launcher.ps1` runs hidden and shows a WScript popup on error.
 - `hide-duplicates.ps1` suppresses duplicate entries in two ways: `LegacyDisable` for simple shell verb keys, and key deletion for COM `shellex\ContextMenuHandlers` entries (e.g. PowerToys Power Rename, GUID `{0440049F-D1DC-4E46-B27B-98393D79486B}`). Backup merges with any prior `.hidden-entries.json` on each run.
 - `uninstall.ps1` supports both old backup format (plain array) and new format (`{ legacyDisable, shellex }`).
@@ -83,20 +80,7 @@ Apps installed via MSIX sparse package (PowerToys `v0.70+`, Windows Terminal) st
 **Windows 11 native "Open in Terminal" is not a registry shell key.**
 It is controlled by the Windows Terminal default terminal setting (Settings → System → For developers → Terminal). It cannot be removed via `LegacyDisable` or any registry edit from this project.
 
-## Context Menu Variability
-
-Expect different right-click menus across machines, accounts, the desktop, normal folders, cloud folders, file items, and folder backgrounds. Explorer composes these menus from multiple sources:
-
-- `Directory\Background\shell` applies to empty space inside folders; `Directory\shell`, `Folder\shell`, `*\shell`, extension-specific keys, and `shellex\ContextMenuHandlers` appear in different click targets.
-- The desktop is a special Shell namespace and can merge desktop, folder background, OneDrive, library, and namespace extension entries.
-- Windows 11 has a compact first-level context menu plus the classic "Show more options" menu. Many old shell verbs and third-party handlers only appear in the classic menu.
-- `HKCU\Software\Classes` is per-user; `HKLM\SOFTWARE\Classes` is machine-wide and often needs admin rights. Registry views can also differ between sandboxed/elevated processes, so verify registry writes in the same privilege/user context that applied them.
-- MSIX apps, cloud sync providers, and COM shell extensions do not always expose simple `shell\<verb>` keys. Some can only be hidden through app settings, Windows settings, or handler deletion/restore logic.
-
-This project can standardize the developer-tool surface it owns by installing a single `Dev Tools` submenu under `Directory\Background\shell` and hiding known duplicate app entries. It cannot fully unify every Explorer context menu because Windows and third-party shell extensions inject items through independent mechanisms.
-
 ## Known App Paths (this machine)
 
 - `POWERRENAME_PATH` → `C:\Program Files\PowerToys\WinUI3Apps\PowerToys.PowerRename.exe` (the `WinUI3Apps\` subdir is required; bare `PowerToys\` path returns NOT_FOUND)
 - `VS_PATH` → VSLauncher fallback: `C:\Program Files (x86)\Common Files\Microsoft Shared\MSEnv\VSLauncher.exe` (full devenv.exe not installed)
-- `CODEX_PATH` → `C:\Program Files\WindowsApps\OpenAI.Codex_26.422.9565.0_x64__2p2nqsd0c76g0\app\Codex.exe` on this machine. The exact package version directory changes after app updates; always re-run `setup-env.ps1 -Force` after Codex updates.

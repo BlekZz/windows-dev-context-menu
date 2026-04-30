@@ -32,6 +32,7 @@
 | 編輯器 | VS Code                       | 以 VS Code 開啟資料夾                                   |
 | 編輯器 | Warp                          | 以 Warp 開啟資料夾                                      |
 | 編輯器 | Antigravity                   | 以 Antigravity 開啟資料夾                               |
+| 編輯器 | Codex                         | 以 Codex 開啟資料夾                                     |
 | 工具   | Power Rename                  | 啟動 PowerToys Power Rename                             |
 | 工具   | Open with Visual Studio       | 以 Visual Studio 開啟資料夾（或 VSLauncher 挑選版本）   |
 
@@ -127,7 +128,7 @@ windows-dev-context-menu/
                              啟動 git-bash.exe
 ```
 
-1. **`setup-env.ps1`** 掃描系統，搜尋各工具的安裝路徑（已知路徑 + Scoop + PATH），將結果寫入 `.env`。PowerShell 7 偵測會枚舉 `Program Files\PowerShell\` 下的所有版本目錄，選取最高檔案版本。
+1. **`setup-env.ps1`** 掃描系統，搜尋各工具的安裝路徑（已知路徑 + Scoop + PATH），將結果寫入 `.env`。PowerShell 7 偵測會枚舉 `Program Files\PowerShell\` 下的所有版本目錄，選取最高檔案版本。Codex 偵測會優先使用 MSIX 桌面 app（`app\Codex.exe`），避免誤抓到隨附的 `resources\codex.exe` CLI helper。
 2. **`install.ps1`** 讀取 `.env`，跳過 `NOT_FOUND` 的項目，在 `HKEY_CURRENT_USER` 下建立子選單。MSIX 打包的 app（PowerToys 等）使用明確的 `shell32.dll` 圖示路徑，避免 Shell 無法從 MSIX exe 提取圖示的問題。
 3. **`hide-duplicates.ps1`**（選用）以兩種方式隱藏重複項目：`LegacyDisable`（shell verb key）與 key 刪除（COM shellex handler）。注意：`shell\cmd` 與 `shell\Powershell` 屬 TrustedInstaller 所有，即使 admin 也無法修改，已排除在目標列表之外。
 4. 點選選單時，Windows 執行 **`launcher.vbs`**（完全隱形，無閃爍），再轉呼叫 **`dev-launcher.ps1`**。若路徑失效，會彈出錯誤提示。Admin 選項透過 `Start-Process -Verb RunAs` 觸發 UAC 提權。
@@ -194,6 +195,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 - `shell\cmd` 與 `shell\Powershell` 屬 TrustedInstaller 所有，無法透過腳本抑制。這兩個 key 只出現在「顯示更多選項」的 classic 選單中。
 - Windows 11 主選單中的**「在終端機中開啟」**是 OS 內建功能，非 registry shell key，無法透過腳本移除。若需關閉，請前往 **Windows 設定 → 系統 → 開發人員專用 → 終端機**，改為「Windows 主控台主機」。
 - 相容於還原 Windows 10 舊式右鍵選單的工具（如 ExplorerPatcher、Winaero Tweaker）。
+
+## 為什麼右鍵選單會不同
+
+Windows 檔案總管會依照你右鍵的位置、選取的物件、資料夾類型和安裝的 shell extension 組合出不同選單：
+
+- **資料夾背景、資料夾本身、檔案本身不同** — 本專案註冊在 `Directory\Background\shell`，所以是在資料夾內空白處右鍵時出現。其他 app 可能註冊在 `Directory\shell`、`Folder\shell`、`*\shell` 或副檔名專用 key。
+- **桌面與一般資料夾不同** — 桌面是特殊 Shell 物件，可能混入桌面、資料夾背景、OneDrive、Library、命名空間 extension 的項目。
+- **Windows 11 主選單與 classic 選單不同** — Windows 11 只把部分項目提升到第一層選單，很多舊式 shell verb 或第三方 handler 只會出現在「顯示更多選項」。
+- **每個使用者與整台機器不同** — `HKCU\Software\Classes` 是每個 Windows 帳號各自一份；`HKLM\SOFTWARE\Classes` 是整台機器共用，而且常需要 admin 才能修改。
+- **MSIX app 與 COM handler 不一定是 shell verb** — 封裝 app 和 COM `shellex\ContextMenuHandlers` 不一定能用單純的 `shell\<verb>` registry key 控制，因此顯示/隱藏行為會和傳統 Win32 app 不同。
+- **雲端與特殊資料夾會注入自己的項目** — OneDrive、Dropbox、Git 工具、Library、虛擬資料夾可能只在它們管理或辨識的路徑中加入選單。
+
+本專案可以把「開發工具」這一組統一到同一個 `Dev Tools` 子選單，也可以透過 `hide-duplicates.ps1` 隱藏已知重複項目。但無法完全統一所有 Explorer 右鍵選單，因為 Windows 本身、封裝 app、雲端同步工具與 COM shell extension 都有各自的注入機制。
 
 ## 📄 授權
 

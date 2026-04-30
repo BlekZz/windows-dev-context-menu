@@ -32,6 +32,7 @@ A customizable Windows right-click context menu that provides quick access to yo
 | Editors   | VS Code                    | Open folder in VS Code                      |
 | Editors   | Warp                       | Open folder in Warp                         |
 | Editors   | Antigravity                | Open folder in Antigravity                  |
+| Editors   | Codex                      | Open folder in Codex                        |
 | Tools     | Power Rename               | Launch PowerToys Power Rename               |
 | Tools     | Open with Visual Studio    | Open folder in Visual Studio (or VSLauncher)|
 
@@ -127,7 +128,7 @@ Right-click folder background → Dev Tools → Git Bash
                                            launches git-bash.exe
 ```
 
-1. **`setup-env.ps1`** scans your system for supported applications (known install paths + Scoop + PATH), then writes discovered paths to `.env`. PowerShell 7 detection enumerates all version subdirectories under `Program Files\PowerShell\` and selects the highest file version.
+1. **`setup-env.ps1`** scans your system for supported applications (known install paths + Scoop + PATH), then writes discovered paths to `.env`. PowerShell 7 detection enumerates all version subdirectories under `Program Files\PowerShell\` and selects the highest file version. Codex detection prefers the MSIX desktop app (`app\Codex.exe`) rather than the bundled `resources\codex.exe` CLI helper.
 2. **`install.ps1`** reads `.env`, skips any `NOT_FOUND` entries, and registers a cascading context menu under `HKEY_CURRENT_USER`. MSIX-packaged apps (PowerToys, etc.) use explicit `shell32.dll` icon references instead of exe-based extraction, which fails for packaged apps.
 3. **`hide-duplicates.ps1`** (optional) suppresses duplicate entries in two ways: `LegacyDisable` for shell verb keys, and key deletion for COM shellex handlers. Backs up all changes to `.hidden-entries.json`. Note: `shell\cmd` and `shell\Powershell` are TrustedInstaller-owned and cannot be modified — they only appear in the classic "Show more options" menu anyway.
 4. When you click a menu item, Windows runs **`launcher.vbs`** via `wscript.exe` (fully invisible — no window flash), which in turn runs **`dev-launcher.ps1`** hidden. If a path is invalid, a popup message is shown. Admin variants use `Start-Process -Verb RunAs` to trigger a UAC prompt.
@@ -194,6 +195,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 - `shell\cmd` and `shell\Powershell` are protected by TrustedInstaller and cannot be suppressed via script. They only appear in the "Show more options" classic context menu.
 - The Windows 11 native **"Open in Terminal"** option in the main context menu is a built-in OS feature, not a registry shell key. To remove it, go to **Windows Settings → System → For developers → Terminal** and set it to "Windows Console Host".
 - Compatible with tools that restore the Windows 10 legacy context menu (e.g. ExplorerPatcher, Winaero Tweaker).
+
+## Why context menus differ
+
+Windows Explorer builds different context menus depending on where you right-click and what is selected:
+
+- **Folder background vs. folder item vs. file item** — this project registers under `Directory\Background\shell`, so it appears when you right-click empty space inside a folder. Tools registered under `Directory\shell`, `Folder\shell`, `*\shell`, or file-extension keys appear in different places.
+- **Desktop vs. normal folder** — the desktop is backed by special Shell objects and may merge entries from desktop, folder background, OneDrive, library, and namespace extensions.
+- **Windows 11 compact menu vs. classic menu** — Windows 11 promotes only some entries to the first menu. Older shell verbs and many third-party handlers may appear only under **Show more options**.
+- **Per-user vs. machine-wide registrations** — `HKCU\Software\Classes` entries can differ per Windows account; `HKLM\SOFTWARE\Classes` entries differ per machine and often require admin rights.
+- **Packaged apps and COM handlers** — MSIX apps and COM `shellex\ContextMenuHandlers` are not always controlled by simple `shell\<verb>` registry keys, so they may show or hide differently from classic Win32 apps.
+- **Cloud and special folders** — OneDrive, Dropbox, Git clients, libraries, and virtual folders can inject handlers only in folders they own or recognize.
+
+This project can standardize the developer tools it owns by installing the same `Dev Tools` submenu under `Directory\Background\shell` and optionally hiding known duplicate app entries. It cannot fully unify every Explorer menu because Windows, packaged apps, cloud providers, and COM shell extensions can inject context items through separate mechanisms.
 
 ## 📄 License
 
